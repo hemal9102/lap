@@ -26,10 +26,15 @@ exports.getStats = async (req, res) => {
 
 exports.createLaptop = async (req, res) => {
   try {
-    const { name, brandName, categoryName, price, description, images, specifications } = req.body;
+    const { name, brandName, categoryName, price, description, specifications } = req.body;
     
-    if (!name || !price || !brandName || !categoryName) {
-      return res.status(400).json({ success: false, message: 'Missing required fields' });
+    // Process image file if uploaded
+    let imagesUrl = null;
+    if (req.file) {
+      imagesUrl = JSON.stringify([`/uploads/${req.file.filename}`]);
+    } else if (req.body.images) {
+      // Fallback for demo mock data if sent via JSON directly without file
+      imagesUrl = JSON.stringify(req.body.images);
     }
 
     const brand = await prisma.brand.upsert({
@@ -52,7 +57,7 @@ exports.createLaptop = async (req, res) => {
         price: Number(price),
         brandId: brand.id,
         categoryId: category.id,
-        images: images ? JSON.stringify(images) : null,
+        images: imagesUrl,
         specifications: specifications ? JSON.stringify(specifications) : null,
         publishStatus: 'published'
       }
@@ -60,6 +65,7 @@ exports.createLaptop = async (req, res) => {
 
     res.status(201).json({ success: true, data: newLaptop });
   } catch (error) {
+    console.error("Error creating laptop:", error);
     res.status(500).json({ success: false, message: 'Error creating laptop', error: error.message });
   }
 };

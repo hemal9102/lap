@@ -24,8 +24,11 @@ export default function LaptopCard({ laptop, index, isHome = false }) {
       const parsed = JSON.parse(laptop.images);
       if (Array.isArray(parsed) && parsed.length > 0) imgSrc = parsed[0];
     } catch(e) {
-      if (typeof laptop.images === 'string' && laptop.images.startsWith('http')) imgSrc = laptop.images;
+      if (typeof laptop.images === 'string') imgSrc = laptop.images;
     }
+  }
+  if (imgSrc && imgSrc.startsWith('/uploads')) {
+    imgSrc = `http://localhost:5000${imgSrc}`;
   }
   if (!imgSrc) imgSrc = "https://images.unsplash.com/photo-1593642632823-8f785ba67e45?auto=format&fit=crop&w=1000&q=80";
 

@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { 
   LayoutDashboard, Laptop, Users, Settings, PlusCircle,
   Search, Activity, Trash2, Edit3, Eye, X, Check,
-  ChevronRight, Tags, Upload
+  ChevronRight, Tags, Upload, LogOut
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
@@ -47,11 +47,17 @@ export default function AdminClient({ initialTab = "dashboard" }) {
   const [activeTab, setActiveTab] = useState(currentTab);
   const [search, setSearch] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [laptops, setLaptops] = useState(DEMO_LAPTOPS);
   const [leads, setLeads] = useState([]);
   const [categories, setCategories] = useState([]);
   const [newLaptop, setNewLaptop] = useState({ name: "", brand: "", category: "", price: "", imageUrl: "", description: "", specifications: "", status: "draft" });
   const [newCategoryName, setNewCategoryName] = useState("");
+  
+  // Auth state
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loginForm, setLoginForm] = useState({ id: "", pass: "" });
+  const [loginError, setLoginError] = useState("");
 
   // Keep activeTab in sync with URL if user navigates manually
   useEffect(() => {
@@ -62,6 +68,10 @@ export default function AdminClient({ initialTab = "dashboard" }) {
 
   useEffect(() => {
     setIsMounted(true);
+    // Check auth from session storage
+    if (sessionStorage.getItem("admin_auth") === "true") {
+      setIsAuthenticated(true);
+    }
     
     // Fetch Leads
     fetch("http://localhost:5000/api/leads")
@@ -121,21 +131,27 @@ export default function AdminClient({ initialTab = "dashboard" }) {
 
   const handleAdd = async (e) => {
     e.preventDefault();
+    setIsSubmitting(true);
     try {
-      const payload = {
-        name: newLaptop.name,
-        brandName: newLaptop.brand,
-        categoryName: newLaptop.category || "General",
-        price: Number(newLaptop.price),
-        images: newLaptop.imageUrl ? [newLaptop.imageUrl] : [],
-        description: newLaptop.description || "Premium Laptop",
-        specifications: newLaptop.specifications ? { details: newLaptop.specifications } : null
-      };
+      const formData = new FormData();
+      formData.append("name", newLaptop.name);
+      formData.append("brandName", newLaptop.brand);
+      formData.append("categoryName", newLaptop.category || "General");
+      formData.append("price", newLaptop.price);
+      formData.append("description", newLaptop.description || "Premium Laptop");
+      if (newLaptop.specifications) {
+        formData.append("specifications", JSON.stringify({ details: newLaptop.specifications }));
+      }
+      if (newLaptop.imageFile) {
+        formData.append("image", newLaptop.imageFile);
+      }
       
       const res = await fetch("http://localhost:5000/api/admin/laptops", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
+        headers: { 
+          "x-admin-api-key": process.env.NEXT_PUBLIC_ADMIN_API_KEY || "default-secret-key-change-me"
+        },
+        body: formData
       });
       const data = await res.json();
       
@@ -152,11 +168,13 @@ export default function AdminClient({ initialTab = "dashboard" }) {
         setNewLaptop({ name: "", brand: "", category: "", price: "", imageUrl: "", description: "", specifications: "", status: "draft" });
         setShowAddModal(false);
       } else {
-        alert("Failed to add laptop: " + data.message);
+        alert("Failed to add laptop: " + (data.message || JSON.stringify(data.errors)));
       }
     } catch (error) {
       console.error(error);
       alert("Error adding laptop to backend.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -164,7 +182,11 @@ export default function AdminClient({ initialTab = "dashboard" }) {
     e.preventDefault();
     try {
       const res = await fetch("http://localhost:5000/api/admin/categories", {
-        method: "POST", headers: { "Content-Type": "application/json" },
+        method: "POST", 
+        headers: { 
+          "Content-Type": "application/json",
+          "x-admin-api-key": "default-secret-key-change-me"
+        },
         body: JSON.stringify({ name: newCategoryName })
       });
       const data = await res.json();
@@ -178,7 +200,10 @@ export default function AdminClient({ initialTab = "dashboard" }) {
   const handleDeleteCategory = async (id) => {
     if (!confirm("Delete category?")) return;
     try {
-      await fetch(`http://localhost:5000/api/admin/categories/${id}`, { method: "DELETE" });
+      await fetch(`http://localhost:5000/api/admin/categories/${id}`, { 
+        method: "DELETE",
+        headers: { "x-admin-api-key": "default-secret-key-change-me" }
+      });
       setCategories(prev => prev.filter(c => c.id !== id));
     } catch(err) { console.error(err); }
   };
@@ -186,13 +211,49 @@ export default function AdminClient({ initialTab = "dashboard" }) {
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setNewLaptop(prev => ({ ...prev, imageUrl: reader.result }));
-      };
-      reader.readAsDataURL(file);
+      setNewLaptop(prev => ({ ...prev, imageFile: file, imageUrl: URL.createObjectURL(file) }));
     }
   };
+
+  const handleLogin = (e) => {
+    e.preventDefault();
+    if (loginForm.id === "admin" && loginForm.pass === "123") {
+      sessionStorage.setItem("admin_auth", "true");
+      setIsAuthenticated(true);
+      setLoginError("");
+    } else {
+      setLoginError("Invalid ID or Password");
+    }
+  };
+
+  const handleLogout = () => {
+    sessionStorage.removeItem("admin_auth");
+    setIsAuthenticated(false);
+  };
+
+  if (!isMounted) return null; // Avoid hydration mismatch for sessionStorage
+
+  if (!isAuthenticated) {
+    return (
+      <div style={{ display: "flex", minHeight: "100vh", background: colors.bg, color: colors.text, overflow: "hidden", position: "relative", alignItems: "center", justifyContent: "center" }}>
+        <GlowOrb color={colors.blue} size="500px" top="-10%" left="20%" delay={0} />
+        <GlowOrb color={colors.purple} size="600px" top="40%" left="70%" delay={2} />
+        
+        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} style={{ width: "100%", maxWidth: 400, padding: 40, background: colors.bgCard, borderRadius: 24, border: `1px solid ${colors.border}`, backdropFilter: "blur(20px)", zIndex: 10, textAlign: "center" }}>
+          <div style={{ width: 60, height: 60, borderRadius: 16, background: `linear-gradient(135deg, ${colors.cyan}, ${colors.blue})`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32, fontWeight: 900, color: "#fff", margin: "0 auto 24px" }}>N</div>
+          <h2 style={{ fontSize: 24, fontWeight: 800, marginBottom: 8 }}>Admin Login</h2>
+          <p style={{ color: colors.textMuted, marginBottom: 32, fontSize: 14 }}>Enter your credentials to access the panel.</p>
+
+          <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <input type="text" placeholder="Admin ID (admin)" value={loginForm.id} onChange={e => setLoginForm({...loginForm, id: e.target.value})} style={{ width: "100%", padding: "14px 20px", borderRadius: 12, background: "rgba(255,255,255,0.05)", border: `1px solid ${colors.border}`, color: "#fff", fontSize: 15 }} required />
+            <input type="password" placeholder="Password (123)" value={loginForm.pass} onChange={e => setLoginForm({...loginForm, pass: e.target.value})} style={{ width: "100%", padding: "14px 20px", borderRadius: 12, background: "rgba(255,255,255,0.05)", border: `1px solid ${colors.border}`, color: "#fff", fontSize: 15 }} required />
+            {loginError && <p style={{ color: colors.orange, fontSize: 13, textAlign: "left", margin: 0 }}>{loginError}</p>}
+            <button type="submit" style={{ width: "100%", padding: "14px", borderRadius: 12, background: `linear-gradient(135deg, ${colors.blue}, ${colors.cyan})`, color: "#fff", fontWeight: 700, border: "none", cursor: "pointer", marginTop: 8, fontSize: 16 }}>Login to Dashboard</button>
+          </form>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: colors.bg, color: colors.text, overflow: "hidden", position: "relative" }}>
@@ -239,11 +300,18 @@ export default function AdminClient({ initialTab = "dashboard" }) {
         <div style={{ padding: 24, borderTop: `1px solid ${colors.border}` }}>
           <a href="/" target="_blank" style={{
             display: "flex", alignItems: "center", gap: 12, padding: "14px 20px", borderRadius: 16,
-            background: "rgba(255,255,255,0.03)", color: colors.textMuted, textDecoration: "none", fontSize: 14, fontWeight: 600, transition: "all 0.3s", border: `1px solid ${colors.border}`
+            background: "rgba(255,255,255,0.03)", color: colors.textMuted, textDecoration: "none", fontSize: 14, fontWeight: 600, transition: "all 0.3s", border: `1px solid ${colors.border}`, marginBottom: 8
           }} onMouseEnter={e => { e.currentTarget.style.color = "#fff"; e.currentTarget.style.background = "rgba(255,255,255,0.08)"; }}
              onMouseLeave={e => { e.currentTarget.style.color = colors.textMuted; e.currentTarget.style.background = "rgba(255,255,255,0.03)"; }}>
             <Eye size={18} /> View Website
           </a>
+          <button onClick={handleLogout} style={{
+            display: "flex", alignItems: "center", gap: 12, padding: "14px 20px", borderRadius: 16, width: "100%", cursor: "pointer",
+            background: "rgba(239, 68, 68, 0.05)", color: colors.orange, border: `1px solid rgba(239, 68, 68, 0.2)`, fontSize: 14, fontWeight: 600, transition: "all 0.3s"
+          }} onMouseEnter={e => { e.currentTarget.style.background = "rgba(239, 68, 68, 0.1)"; }}
+             onMouseLeave={e => { e.currentTarget.style.background = "rgba(239, 68, 68, 0.05)"; }}>
+            <LogOut size={18} /> Logout
+          </button>
         </div>
       </div>
 
@@ -486,8 +554,10 @@ export default function AdminClient({ initialTab = "dashboard" }) {
                 <textarea required rows={2} value={newLaptop.description} onChange={e=>setNewLaptop({...newLaptop, description:e.target.value})} style={{ padding: "12px 16px", borderRadius: 12, background: "rgba(0,0,0,0.3)", border: `1px solid ${colors.border}`, color: "#fff", outline: "none", resize: "none" }} />
               </div>
               <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
-                <button type="button" onClick={() => setShowAddModal(false)} style={{ flex: 1, padding: 16, borderRadius: 12, background: "rgba(255,255,255,0.05)", color: "#fff", fontWeight: 700, border: "none", cursor: "pointer" }}>Cancel</button>
-                <button type="submit" style={{ flex: 1, padding: 16, borderRadius: 12, background: colors.blue, color: "#fff", fontWeight: 700, border: "none", cursor: "pointer" }}>Add Laptop</button>
+                <button type="button" onClick={() => setShowAddModal(false)} style={{ flex: 1, padding: 16, borderRadius: 12, background: "rgba(255,255,255,0.05)", color: "#fff", fontWeight: 700, border: "none", cursor: "pointer" }} disabled={isSubmitting}>Cancel</button>
+                <button type="submit" style={{ flex: 1, padding: 16, borderRadius: 12, background: isSubmitting ? colors.textMuted : colors.blue, color: "#fff", fontWeight: 700, border: "none", cursor: isSubmitting ? "wait" : "pointer" }} disabled={isSubmitting}>
+                  {isSubmitting ? "Uploading..." : "Add Laptop"}
+                </button>
               </div>
             </form>
           </motion.div>

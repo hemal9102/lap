@@ -15,16 +15,17 @@ graph TD
         Express --> Routes
         Routes --> Controllers
         Controllers --> Prisma[Prisma ORM]
+        Routes -- "Admin Auth (API Key)" --> AdminRoutes
     end
     
     subgraph Database
         Prisma --> SQLite[(SQLite DB)]
-        SQLite --> Models[User, Laptop, Category, Brand, Lead]
+        SQLite --> Models[User, Laptop, Category, Brand, Lead, Service]
     end
 ```
 
 ## System-Wide Flow
-1. **Public Site (`/`, `/laptops`, `/contact`)**: Served by Next.js. Data is fetched directly from the Express Backend via standard Fetch API (`GET /api/laptops`). Contact form submissions generate new leads via (`POST /api/leads`). Non-existent paths gracefully fallback to a stylized `not-found.js` page.
+1. **Public Site (`/`, `/laptops`, `/contact`)**: Served by Next.js. The homepage (`page.js`) is an SEO-optimized React Server Component (RSC) that fetches data directly on the server to maximize Search Engine Indexing and Core Web Vitals. Data is fetched directly from the Express Backend (`GET /api/laptops`, `GET /api/services`). Contact form submissions generate new leads via (`POST /api/leads`). Non-existent paths gracefully fallback to a stylized `not-found.js` page.
 2. **Admin Panel (`/admin`)**: Built as a client-side Single Page Application (SPA) leveraging state-based tabs to bypass full page reloads.
    - It performs live fetches for Dashboard Statistics, Catalog modifications, Leads checking, and Category additions.
    - The UI natively supports converting local image uploads into Base64 formats to securely POST to the backend.
