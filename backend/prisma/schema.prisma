@@ -1,0 +1,104 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  password  String
+  role      String   @default("admin") // admin, staff
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Category {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  laptops     Laptop[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Brand {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  slug        String   @unique
+  logoUrl     String?
+  laptops     Laptop[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Laptop {
+  id              Int      @id @default(autoincrement())
+  name            String
+  slug            String   @unique
+  shortDesc       String?
+  description     String
+  
+  price           Float
+  offerPrice      Float?
+  stock           Int      @default(0)
+  isFeatured      Boolean  @default(false)
+  publishStatus   String   @default("draft") // draft, published
+  
+  // Relations
+  categoryId      Int
+  category        Category @relation(fields: [categoryId], references: [id])
+  brandId         Int
+  brand           Brand    @relation(fields: [brandId], references: [id])
+  
+  // Dynamic Specifications (JSON as String for SQLite)
+  specifications  String?
+  
+  // Array of image URLs (Stored as comma separated or JSON string)
+  images          String?
+  
+  // SEO
+  seoTitle        String?
+  metaDescription String?
+  keywords        String?
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Lead {
+  id               Int      @id @default(autoincrement())
+  name             String
+  email            String
+  phone            String?
+  message          String
+  interestedLaptop String?
+  status           String   @default("open") // open, contacted, resolved
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model Page {
+  id        Int      @id @default(autoincrement())
+  title     String
+  slug      String   @unique
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Setting {
+  id           Int      @id @default(autoincrement())
+  key          String   @unique
+  value        String
+  description  String?
+  updatedAt    DateTime @updatedAt
+}
