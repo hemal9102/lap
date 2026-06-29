@@ -27,7 +27,16 @@ export default async function LaptopsPage() {
     if (res.ok) {
       const json = await res.json();
       if (json.data && Array.isArray(json.data) && json.data.length > 0) {
-        laptops = json.data;
+        laptops = json.data.map(l => ({
+          id: l.id,
+          name: l.name,
+          brand: l.brand?.name || "Unknown",
+          category: l.category?.name || "",
+          price: "₹" + l.price.toLocaleString("en-IN"),
+          img: l.images ? JSON.parse(l.images)[0] : "https://images.unsplash.com/photo-1496181133206-80ce9b88a853",
+          specs: l.specifications ? Object.values(JSON.parse(l.specifications)).join(" · ") : "",
+          badge: l.publishStatus === 'published' ? 'Available' : ''
+        }));
       }
     }
   } catch (err) {

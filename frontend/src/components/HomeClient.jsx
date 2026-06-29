@@ -348,6 +348,109 @@ export default function HomeClient() {
               Discover NextTop
             </Link>
           </motion.div>
+
+          {/* 3D Laptop Opening Animation */}
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1, delay: 0.5 }}
+            style={{
+              marginTop: 60,
+              perspective: 1200,
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "flex-end",
+              height: 300
+            }}
+          >
+            {/* The Laptop */}
+            <div style={{ position: "relative", width: 500, height: 300, transformStyle: "preserve-3d" }}>
+              {/* Lid */}
+              <motion.div
+                initial={{ rotateX: -90 }}
+                animate={{ rotateX: isLidOpen ? 0 : -90 }}
+                transition={{ duration: 2, ease: [0.25, 0.1, 0.25, 1], delay: 0.5 }}
+                style={{
+                  position: "absolute",
+                  bottom: 0,
+                  width: "100%",
+                  height: 300,
+                  background: "#111",
+                  borderRadius: "16px 16px 0 0",
+                  border: "2px solid #333",
+                  borderBottom: "none",
+                  transformOrigin: "bottom",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  overflow: "hidden",
+                  boxShadow: "0 -10px 40px rgba(6, 182, 212, 0.2)",
+                  backfaceVisibility: "hidden"
+                }}
+              >
+                {/* Screen content */}
+                <div style={{
+                  position: "absolute",
+                  inset: 8,
+                  background: "#000",
+                  borderRadius: "8px 8px 0 0",
+                  overflow: "hidden",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center"
+                }}>
+                  {showLaptops && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 1 }}
+                      style={{
+                        color: colors.cyan,
+                        fontSize: 24,
+                        fontWeight: "bold",
+                        textAlign: "center",
+                        textShadow: `0 0 20px ${colors.cyan}`
+                      }}
+                    >
+                      <span style={{ display: 'block', fontSize: 40, marginBottom: 10 }}>🚀</span>
+                      SYSTEM ONLINE
+                    </motion.div>
+                  )}
+                  {/* Screen Glare */}
+                  <div style={{
+                    position: "absolute", inset: 0,
+                    background: "linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 50%)",
+                    pointerEvents: "none"
+                  }} />
+                </div>
+              </motion.div>
+
+              {/* Base */}
+              <div style={{
+                position: "absolute",
+                bottom: -15,
+                width: "104%",
+                left: "-2%",
+                height: 15,
+                background: "#222",
+                borderRadius: "0 0 16px 16px",
+                borderTop: "2px solid #444",
+                boxShadow: "0 20px 40px rgba(0,0,0,0.8)"
+              }}>
+                <div style={{
+                  position: "absolute",
+                  top: 0,
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                  width: 100,
+                  height: 4,
+                  background: "#444",
+                  borderRadius: "0 0 4px 4px"
+                }} />
+              </div>
+            </div>
+          </motion.div>
+
         </div>
 
         {/* Scroll indicator */}
@@ -394,13 +497,8 @@ export default function HomeClient() {
         </motion.div>
       </section>
 
-      {/* ─── FEATURES ─── */}
-      <section
-        style={{
-          padding: "120px 24px",
-          position: "relative",
-        }}
-      >
+      {/* ─── FEATURES (BENTO GRID) ─── */}
+      <section style={{ padding: "120px 24px", position: "relative" }}>
         <div style={{ maxWidth: 1200, margin: "0 auto" }}>
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -408,22 +506,9 @@ export default function HomeClient() {
             viewport={{ once: true }}
             style={{ textAlign: "center", marginBottom: 80 }}
           >
-            <h2
-              style={{
-                fontSize: "clamp(32px, 5vw, 54px)",
-                fontWeight: 800,
-                letterSpacing: "-1px",
-                marginBottom: 16,
-              }}
-            >
+            <h2 style={{ fontSize: "clamp(32px, 5vw, 54px)", fontWeight: 800, letterSpacing: "-1px", marginBottom: 16 }}>
               Masterfully{" "}
-              <span
-                style={{
-                  background: `linear-gradient(135deg, ${colors.purple}, ${colors.pink})`,
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                }}
-              >
+              <span style={{ background: `linear-gradient(135deg, ${colors.purple}, ${colors.pink})`, WebkitBackgroundClip: "text"}}>
                 Engineered
               </span>
             </h2>
@@ -432,16 +517,20 @@ export default function HomeClient() {
             </p>
           </motion.div>
 
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-              gap: 24,
-            }}
-          >
-            {features.map((f, i) => (
-              <FeatureCard key={i} index={i} {...f} />
-            ))}
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+            gridAutoRows: "minmax(300px, auto)",
+            gap: 24,
+          }}>
+            {/* Main Feature - Large Span */}
+            <div style={{ gridColumn: "1 / -1", '@media (minWidth: 768px)': { gridColumn: "span 2" } }}>
+               <FeatureCard index={0} icon="⚡" title="Quantum Speed & Thermal Dynamics" desc="Equipped with the latest gen Intel Core Ultra and Apple M-Series processors. We use liquid metal thermal compounds and vapor chamber cooling to ensure zero thermal throttling, even during 8K video renders." accentColor={colors.cyan} />
+            </div>
+            
+            <FeatureCard index={1} icon="💎" title="Aerospace Build" desc="Machined from a single block of aerospace-grade aluminum. Military-grade durability meets featherweight portability." accentColor={colors.purple} />
+            <FeatureCard index={2} icon="👁️" title="Retina Reality" desc="120Hz OLED panels with 100% DCI-P3 color gamut. Your code and creations, displayed in absolute truth." accentColor={colors.emerald} />
+            <FeatureCard index={3} icon="🔋" title="Endless Battery" desc="High-density batteries paired with intelligent power management software. Go from dawn to dusk without carrying a charger." accentColor={colors.blue} />
           </div>
         </div>
       </section>
